@@ -42,7 +42,7 @@ body {
 # ================================
 # LOAD MODEL
 # ================================
-model_data = joblib.load("ruas_water_model.pkl")
+model_data = joblib.load("ruas_model_v2.pkl")
 model = model_data["model"]
 features = model_data["features"]
 
