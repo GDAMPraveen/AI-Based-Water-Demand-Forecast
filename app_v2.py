@@ -8,34 +8,74 @@ import joblib
 st.set_page_config(page_title="SAYUKTA AI", page_icon="💧", layout="wide")
 
 # ================================
-# CUSTOM CSS (MATCH YOUR HTML STYLE)
+# ADVANCED CSS
 # ================================
 st.markdown("""
 <style>
-body {
-    background-color: #f8fafc;
+
+/* BACKGROUND */
+.stApp {
+    background: linear-gradient(135deg, #eef2f7, #f8fafc);
 }
-.big-title {
-    font-size: 40px;
-    font-weight: 800;
-    color: #003366;
-}
-.card {
-    background: white;
-    padding: 30px;
+
+/* HEADER */
+.header {
+    font-size: 42px;
+    font-weight: 900;
+    color: white;
+    padding: 25px;
     border-radius: 15px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    background: linear-gradient(90deg, #003366, #0055aa);
+    text-align: center;
+    box-shadow: 0px 8px 20px rgba(0,0,0,0.2);
 }
+
+/* CARD */
+.card {
+    background: rgba(255,255,255,0.9);
+    padding: 25px;
+    border-radius: 18px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+    backdrop-filter: blur(10px);
+    margin-top: 20px;
+}
+
+/* METRIC BIG */
 .metric {
-    font-size: 60px;
+    font-size: 65px;
     font-weight: 900;
     color: #003366;
+    text-align: center;
 }
+
+/* KPI BOX */
+.kpi {
+    background: white;
+    padding: 15px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+}
+
+/* AI NOTE */
 .note {
     background: #fdfaf3;
     padding: 20px;
+    border-left: 5px solid #C5A059;
     border-radius: 10px;
+    margin-top: 15px;
 }
+
+/* SIDEBAR */
+section[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #003366, #002244);
+    color: white;
+}
+
+section[data-testid="stSidebar"] * {
+    color: white !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -47,106 +87,120 @@ model = model_data["model"]
 features = model_data["features"]
 
 # ================================
-# SIDEBAR (LIKE YOUR HTML)
+# SIDEBAR
 # ================================
-st.sidebar.title("💧 SAYUKTA")
+st.sidebar.title("💧 SAYUKTA AI")
 
-campus = st.sidebar.selectbox("Campus", ["Gnanagangothri", "Peenya"])
-event = st.sidebar.selectbox("Event", ["none", "akaira", "fresher", "senior"])
-weather = st.sidebar.selectbox("Weather", ["normal", "summer", "monsoon"])
-hostel = st.sidebar.selectbox("Hostel", ["full", "partial", "empty"])
+campus = st.sidebar.selectbox("🏫 Campus", ["Gnanagangothri", "Peenya"])
+day_type = st.sidebar.radio("📅 Day Type", ["Academic Day", "Event Day"])
+
+exam = 0
+selected_event = None
+
+if day_type == "Academic Day":
+    academic_type = st.sidebar.selectbox("Academic Type", ["Regular", "Exam Day"])
+    if academic_type == "Exam Day":
+        exam = 1
+
+if day_type == "Event Day":
+    selected_event = st.sidebar.selectbox(
+        "🎉 Event",
+        ["Akaira", "Pravrutti", "Freshers Day", "Senior Sendoff"]
+    )
+
+st.sidebar.markdown("### 👥 Occupancy")
+hostel_occ = st.sidebar.slider("Hostel", 0, 800, 500)
+day_occ = st.sidebar.slider("Day Scholars", 0, 2500, 1500)
+
+st.sidebar.markdown("### 🌦 Weather")
+weather = st.sidebar.selectbox("Weather", ["Normal", "Summer", "Monsoon"])
+
+if weather == "Summer":
+    temp, humidity = 35, 40
+elif weather == "Monsoon":
+    temp, humidity = 24, 85
+else:
+    temp, humidity = 26, 60
 
 # ================================
 # INPUT FUNCTION
 # ================================
 def prepare_input():
-    input_dict = {f: 0 for f in features}
+    d = {f: 0 for f in features}
 
-    # Events
-    if event == "akaira":
-        input_dict["Akaira"] = 1
-    elif event == "fresher":
-        input_dict["Freshers_Day"] = 1
-    elif event == "senior":
-        input_dict["Senior_Sendoff"] = 1
+    d["Exams"] = exam
 
-    # Weather
-    if weather == "summer":
-        input_dict["Temp"] = 35
-        input_dict["Humidity"] = 40
-    elif weather == "monsoon":
-        input_dict["Temp"] = 24
-        input_dict["Humidity"] = 85
-    else:
-        input_dict["Temp"] = 26
-        input_dict["Humidity"] = 60
+    if selected_event:
+        mapping = {
+            "Akaira": "Akaira",
+            "Pravrutti": "Pravrutti",
+            "Freshers Day": "Freshers_Day",
+            "Senior Sendoff": "Senior_Sendoff"
+        }
+        d[mapping[selected_event]] = 1
 
-    # Hostel
-    if hostel == "full":
-        input_dict["Hostel_Occupancy"] = 750
-        input_dict["Day_Scholar_Occupancy"] = 1800
-    elif hostel == "partial":
-        input_dict["Hostel_Occupancy"] = 300
-        input_dict["Day_Scholar_Occupancy"] = 1200
-    else:
-        input_dict["Hostel_Occupancy"] = 50
-        input_dict["Day_Scholar_Occupancy"] = 200
+    d["Temp"] = temp
+    d["Humidity"] = humidity
 
-    # Total
-    input_dict["Total_Occupancy"] = (
-        input_dict["Hostel_Occupancy"] +
-        input_dict["Day_Scholar_Occupancy"]
-    )
+    d["Hostel_Occupancy"] = hostel_occ
+    d["Day_Scholar_Occupancy"] = day_occ
+    d["Total_Occupancy"] = hostel_occ + day_occ
 
-    # Defaults
-    input_dict["Is_Weekend"] = 0
-    input_dict["Is_Vacation"] = 1 if hostel == "empty" else 0
-    input_dict["Water_Price_Index"] = 1.2
-    input_dict["Peak_Factor"] = 1.5
+    d["Is_Weekend"] = 0
+    d["Is_Vacation"] = 0
+    d["Water_Price_Index"] = 1.2
+    d["Peak_Factor"] = 1.5
 
-    return pd.DataFrame([input_dict])[features]
+    return pd.DataFrame([d])[features]
 
 # ================================
-# MAIN UI
+# HEADER
 # ================================
-st.markdown('<div class="big-title">SAYUKTA AI Water Intelligence</div>', unsafe_allow_html=True)
+st.markdown('<div class="header">💧 SAYUKTA AI Water Intelligence System</div>', unsafe_allow_html=True)
 
-st.markdown("Predict and optimize campus water usage using AI")
+# ================================
+# KPI ROW
+# ================================
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.markdown('<div class="kpi">🏫 Campus<br><b>{}</b></div>'.format(campus), unsafe_allow_html=True)
+
+with col2:
+    st.markdown('<div class="kpi">👥 Total Users<br><b>{}</b></div>'.format(hostel_occ + day_occ), unsafe_allow_html=True)
+
+with col3:
+    st.markdown('<div class="kpi">🌡 Temp<br><b>{}°C</b></div>'.format(temp), unsafe_allow_html=True)
 
 # ================================
 # BUTTON
 # ================================
-if st.button("🚀 CONSULT AI AGENT"):
+if st.button("🚀 RUN AI PREDICTION"):
 
     input_df = prepare_input()
     prediction = model.predict(input_df)[0]
 
-    # ================================
-    # OUTPUT CARD
-    # ================================
     st.markdown('<div class="card">', unsafe_allow_html=True)
 
-    st.markdown("### 📊 Estimated Water Demand")
+    st.markdown("### 📊 Predicted Water Demand")
     st.markdown(f'<div class="metric">{int(prediction):,} L</div>', unsafe_allow_html=True)
 
     st.markdown("### 🤖 AI Insight")
 
-    st.markdown(f"""
-    <div class="note">
-    Based on the selected campus conditions, water demand is predicted to reach 
-    <b>{int(prediction):,} liters</b>.
+    reason = f"Predicted demand is **{int(prediction):,} liters**.\n\n"
 
-    <br><br>
-    <b>Key Drivers:</b>
-    <ul>
-    <li>Event-based crowd increase</li>
-    <li>Weather conditions</li>
-    <li>Hostel & campus occupancy</li>
-    </ul>
+    if exam:
+        reason += "- Exams increase daytime usage.\n"
+    if selected_event:
+        reason += f"- Event {selected_event} increases consumption.\n"
+    if weather == "Summer":
+        reason += "- Heat increases water usage.\n"
 
-    <b>Recommendation:</b><br>
-    Adjust pump schedules and monitor peak hours to reduce water wastage.
-    </div>
-    """, unsafe_allow_html=True)
+    reason += "\n**Recommendation:** Monitor peak usage and optimize distribution."
+
+    st.markdown(f'<div class="note">{reason}</div>', unsafe_allow_html=True)
 
     st.markdown('</div>', unsafe_allow_html=True)
+
+    st.subheader("📋 Input Data")
+    st.dataframe(input_df)
